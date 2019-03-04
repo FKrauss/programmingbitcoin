@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="Asciidoctor 1.5.4">
+  <title>Finite Fields</title>
+  <link rel="stylesheet" href="https://asciidoclive.com/assets/asciidoctor.js/css/asciidoctor.css">
+</head>
+
+<body class="article">
+  <div id="header">
+  </div>
+  <div id="content">
+    <div class="sect1 pagenumrestart">
+      <h2 id="chapter_finite_fields">Finite Fields</h2>
+      <div class="sectionbody">
+        <div class="paragraph lead">
+          <p>One of the most difficult things about learning how to program Bitcoin
+            is knowing where to start. There are so many components that depend on
+            each other that learning one thing may lead you to have to learn another,
+            which in turn may lead you to need to learn something else before you
+            can understand the original thing.</p>
+        </div>
+        <div class="paragraph">
+          <p>This chapter is going to get you off to a more manageable start. It may
+            seem strange, but we&#8217;ll start with the basic math that you need
+            to understand elliptic curve cryptography. Elliptic curve cryptography,
+            in turn, gives us the signing and verification algorithms. These are
+            at the heart of how transactions work, and transactions are the atomic
+            unit of value transfer in Bitcoin. By learning about finite fields and
+            elliptic curves first, you&#8217;ll get a firm grasp of concepts that
+            you&#8217;ll need to progress logically.</p>
+        </div>
+        <div class="paragraph">
+          <p>Be aware that this chapter and the next two chapters may feel a bit like
+            you&#8217;re eating vegetables, especially if you haven&#8217;t done
+            formal math in a long time. I would encourage you to get through them,
+            though, as the concepts and code presented here will be used throughout
+            the book.</p>
+        </div>
+        <div class="sect2">
+          <h3 id="_learning_higher_level_math">Learning Higher-Level Math</h3>
+          <div class="paragraph">
+            <p>Learning about new mathematical structures can be a bit intimidating,
+              and in this chapter, I hope to dispel the myth that high-level math
+              is difficult. Finite fields, in particular, don&#8217;t require all
+              that much more in terms of prior mathematical knowledge than, say,
+              algebra.</p>
+          </div>
+          <div class="paragraph">
+            <p>Think of finite fields as something that you could have learned instead
+              of trigonometry, except that the education system you&#8217;re a part
+              of decided that trigonometry was more important for you to learn. This
+              is my way of telling you that finite fields are not that hard to learn
+              and require no more background than algebra.</p>
+          </div>
+          <div class="paragraph">
+            <p>This chapter is required if you want to understand elliptic curve cryptography.
+              Elliptic curve cryptography is required for understanding signing and
+              verification, which is at the heart of Bitcoin itself. As I&#8217;ve
+              said, this chapter and the next two may feel a bit unrelated, but I
+              encourage you to endure. The fundamentals here will not only make understanding
+              Bitcoin a lot easier, but also make understanding Schnorr signatures,
+              confidential transactions, and other leading-edge Bitcoin technologies
+              easier.</p>
+          </div>
+        </div>
+        <div class="sect2">
+          <h3 id="_finite_field_definition">Finite Field Definition</h3>
+          <div class="paragraph">
+            <p>Mathematically, a <em>finite field</em> is defined as a finite set of
+              numbers and two operations <strong>+</strong> (addition) and <strong>⋅</strong>              (multiplication) that satisfy the following:</p>
+          </div>
+          <div class="olist arabic">
+            <ol class="arabic">
+              <li>
+                <p>If <em>a</em> and <em>b</em> are in the set, <em>a + b</em> and <em>a</em>                  ⋅ <em>b</em> are in the set. We call this property <em>closed</em>.</p>
+              </li>
+              <li>
+                <p>0 exists and has the property <em>a</em> + 0 = <em>a</em>. We call
+                  this the <em>additive identity</em>.</p>
+              </li>
+              <li>
+                <p>1 exists and has the property <em>a</em> ⋅ 1 = <em>a</em>. We call
+                  this the <em>multiplicative identity</em>.</p>
+              </li>
+              <li>
+                <p>If <em>a</em> is in the set, <em>–a</em> is in the set, which is
+                  defined as the value that makes <em>a</em> + (–<em>a</em>) = 0.
+                  This is what we call the <em>additive inverse</em>.</p>
+              </li>
+              <li>
+                <p>If <em>a</em> is in the set and is not 0, <em>a</em><sup>–1</sup>                  is in the set, which is defined as the value that makes <em>a</em>                  ⋅ <em>a</em><sup>–1</sup> = 1. This is what we call the <em>multiplicative inverse</em>.</p>
+              </li>
+            </ol>
+          </div>
+          <div class="paragraph">
+            <p>Let&#8217;s unpack each of these criteria.</p>
+          </div>
+          <div class="paragraph">
+            <p>We have a set of numbers that&#8217;s finite. Because the set is finite,
+              we can designate a number <em>p</em>, which is how big the set is.
+              This is what we call the <em>order</em> of the set.</p>
+          </div>
+          <div class="paragraph">
+            <p>#1 says we are closed under addition and multiplication. This means that
+              we have to define addition and multiplication in a way that ensures
+              the results stay in the set. For example, a set containing {0,1,2}
+              is <em>not</em> closed under addition, since 1 + 2 = 3 and 3 is not
+              in the set; neither is 2 + 2 = 4. Of course we can define addition
+              a little differently to make this work, but using "normal" addition,
+              this set is not closed. On the other hand, the set {–1,0,1} is closed
+              under normal multiplication. Any two numbers can be multiplied (there
+              are nine such combinations), and the result is always in the set.</p>
+          </div>
+          <div class="paragraph">
+            <p>The other option we have in mathematics is to define multiplication in
+              a particular way to make these sets closed. We&#8217;ll get to how
+              exactly we define addition and multiplication later in this chapter,
+              but the key concept here is that we can <em>define addition and subtraction differently than the addition and subtraction you are familiar with</em>.</p>
+          </div>
+          <div class="paragraph">
+            <p>#2 and #3 mean that we have the additive and multiplicative identities.
+              That means 0 and 1 are in the set.</p>
+          </div>
+          <div class="paragraph">
+            <p>#4 means that we have the additive inverse. That is, if <em>a</em> is
+              in the set, <em>–a</em> is in the set. Using the additive inverse,
+              we can define subtraction.</p>
+          </div>
+          <div class="paragraph">
+            <p>#5 means that multiplication has the same property. If <em>a</em> is
+              in the set, <em>a</em><sup>–1</sup> is in the set. That is <em>a</em>              ⋅ <em>a</em><sup>–1</sup> = 1. Using the multiplicative inverse, we
+              can define division. This will be the trickiest to define in a finite
+              field.</p>
+          </div>
+        </div>
+        <div class="sect2">
+          <h3 id="_defining_finite_sets">Defining Finite Sets</h3>
+          <div class="paragraph">
+            <p>If the order (or size) of the set is <em>p</em>, we can call the elements
+              of the set, 0, 1, 2, &#8230;&#8203; <em>p</em> – 1. These numbers are
+              what we call the <em>elements</em> of the set, not necessarily the
+              traditional numbers 0, 1, 2, 3, etc. They behave in many ways like
+              traditional numbers, but have some differences in how we add, subtract,
+              multiply, and so forth.</p>
+          </div>
+          <div class="paragraph">
+            <p>In math notation the finite field set looks like this:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>F</em><sub>p</sub> = {0, 1, 2, ... <em>p</em>–1}</li>
+          </ul>
+          <div class="paragraph">
+            <p>What&#8217;s in the finite field set are the elements.
+              <em>F</em><sub><em>p</em></sub> is a specific finite field called "field
+              of <em>p</em>" or "field of 29" or whatever the size of it is (again,
+              the size is what mathematicians call <em>order</em>). The numbers between
+              the {}s represent what elements are in the field. We name the elements
+              0, 1, 2, etc. because these names are convenient for our purposes.</p>
+          </div>
+          <div class="paragraph">
+            <p>A finite field of order 11 looks like this:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>F</em><sub>11</sub> = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}</li>
+          </ul>
+          <div class="paragraph">
+            <p>A finite field of order 17 looks like this:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>F</em><sub>17</sub>= {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+              14, 15, 16}</li>
+          </ul>
+          <div class="paragraph">
+            <p>A finite field of order 983 looks like this:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>F</em><sub>983</sub>= {0, 1, 2, ... 982}</li>
+          </ul>
+          <div class="paragraph">
+            <p>Notice the order of the field is always 1 more than the largest element.
+              You might have noticed that the field has a prime order every time.
+              For a variety of reasons that will become clear later, it turns out
+              that fields <em>must</em> have an order that is a power of a prime,
+              and that the finite fields whose order is prime are the ones we&#8217;re
+              interested in.</p>
+          </div>
+          <div class="sect3">
+            <h4 id="_constructing_a_finite_field_in_python">Constructing a Finite Field in Python</h4>
+            <div class="paragraph">
+              <p>We want to represent each finite field element, so in Python, we&#8217;ll
+                be creating a class that represents a single finite field element.
+                Naturally, we&#8217;ll name the class <span class="keep-together"><code>FieldElement</code></span>.</p>
+            </div>
+            <div class="paragraph">
+              <p>The class represents an element in a field <em>F</em><sub>prime</sub>.
+                The bare bones of the class look like this:</p>
+            </div>
+            <div class="listingblock">
+              <div class="content">
+                <pre class="highlight"><code class="language-python" data-lang="python">link:code-ch01/ecc.py[]</code></pre>
+              </div>
+            </div>
+            <div class="colist arabic">
+              <ol>
+                <li>
+                  <p>We first check that <code>num</code> is between <code>0</code>                    and <code>prime-1</code> inclusive. If not, we get an invalid
+                    FieldElement and we raise a <code>ValueError</code>, which is
+                    what we should raise when we get an inappropriate value.</p>
+                </li>
+                <li>
+                  <p>The rest of the <code><em>init</em></code> method assigns the initialization
+                    values to the object.</p>
+                </li>
+                <li>
+                  <p>The <code><em>eq</em></code> method checks if two objects of class
+                    <code>FieldElement</code> are equal. This is only true when the
+                    <code>num</code> and <code>prime</code> properties are equal.</p>
+                </li>
+              </ol>
+            </div>
+            <div class="paragraph">
+              <p>What we&#8217;ve defined already allows us to do this:</p>
+            </div>
+            <div class="listingblock">
+              <div class="content">
+                <pre class="highlight"><code class="language-python" data-lang="python">link:code-ch01/examples.py[]</code></pre>
+              </div>
+            </div>
+            <div class="paragraph">
+              <p>Python allows us to override the <code>==</code> operator on <code>FieldElement</code>                with the <code><em>eq</em></code> method, which is something we&#8217;ll
+                be taking advantage of going forward.</p>
+            </div>
+            <div class="paragraph">
+              <p>You can see this in action in the code that accompanies this book.
+                Once you&#8217;ve set up Jupyter Notebook (see <a href="#setting_up">[setting_up]</a>),
+                you can navigate to <em>code-ch01/Chapter1.ipynb</em> and run the
+                code to see the results. For the next exercise, you&#8217;ll want
+                to open up <em>ecc.py</em> by clicking the link in the Exercise 1
+                box. If you get stuck, please remember that the answers to every
+                exercise are in <a href="#appendix_solutions">[appendix_solutions]</a>.</p>
+            </div>
+            <div class="paragraph">
+              <p><a href="code-ch01/answers.py" class="bare">code-ch01/answers.py</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="sect2">
+          <h3 id="_modulo_arithmetic">Modulo Arithmetic</h3>
+          <div class="paragraph">
+            <p>One of the tools we can use to make a finite field closed under addition,
+              subtraction, multiplication, and division is something called <em>modulo arithmetic</em>.</p>
+          </div>
+          <div class="paragraph">
+            <p>We can define addition on the finite set using modulo arithmetic, which
+              is something you probably learned when you first learned division.
+              Remember problems like the one in <a href="#long_division_example_one">Long division example 1</a>?</p>
+          </div>
+          <div id="long_division_example_one" class="imageblock">
+            <div class="content">
+              <img src="images/prbc_0101.png" alt="Long Division Example 1">
+            </div>
+            <div class="title">Figure 1. Long division example 1</div>
+          </div>
+          <div class="paragraph">
+            <p>Whenever the division wasn&#8217;t even, there was something called the
+              "remainder," which is the amount left over from the actual division.
+              We define modulo in the same way. We use the operator % for modulo:</p>
+          </div>
+          <ul class="simplelist">
+            <li>7 % 3 = 1</li>
+          </ul>
+          <div class="paragraph">
+            <p><a href="#long_division_example_two">Long division example 2</a> shows
+              another example.</p>
+          </div>
+          <div id="long_division_example_two" class="imageblock">
+            <div class="content">
+              <img src="images/prbc_0102.png" alt="Long Division Example 2">
+            </div>
+            <div class="title">Figure 2. Long division example 2</div>
+          </div>
+          <div class="paragraph">
+            <p>Formally speaking, the modulo operation is the remainder after division
+              of one number by another. Let&#8217;s look at another example with
+              larger numbers:</p>
+          </div>
+          <ul class="simplelist">
+            <li>1747 % 241 = 60</li>
+          </ul>
+          <div class="paragraph pagebreak-before">
+            <p>If it helps, you can think of modulo arithmetic as "wraparound" or "clock"
+              math. Imagine a problem like this:</p>
+          </div>
+          <ul class="simplelist">
+            <li>It is currently 3 o'clock. What hour will it be 47 hours from now?</li>
+          </ul>
+          <div class="paragraph">
+            <p>The answer is 2 o&#8217;clock because (3 + 47) % 12 = 2 (see <a href="#clock_going_forward_47_hours">Clock going forward 47 hours</a>).</p>
+          </div>
+          <div id="clock_going_forward_47_hours" class="imageblock">
+            <div class="content">
+              <img src="images/prbc_0103.png" alt="Clock">
+            </div>
+            <div class="title">Figure 3. Clock going forward 47 hours</div>
+          </div>
+          <div class="paragraph">
+            <p>We can also see this as "wrapping around" in the sense that we go past
+              0 every time we move ahead 12 hours.</p>
+          </div>
+          <div class="paragraph">
+            <p>We can perform modulo on negative numbers. For example, you can ask:</p>
+          </div>
+          <ul class="simplelist">
+            <li>It is currently 3 o'clock. What hour was it 16 hours ago?</li>
+          </ul>
+          <div class="paragraph">
+            <p>The answer is 11 o&#8217;clock:</p>
+          </div>
+          <ul class="simplelist">
+            <li>(3 – 16) % 12 = 11</li>
+          </ul>
+          <div class="paragraph">
+            <p>The minute hand is also a modulo operation. For example, you can ask:</p>
+          </div>
+          <ul class="simplelist">
+            <li>It is currently 12 minutes past the hour. What minute will it be 843
+              minutes from now?</li>
+          </ul>
+          <div class="paragraph">
+            <p>It will be 15 minutes past the hour:</p>
+          </div>
+          <ul class="simplelist">
+            <li>(12 + 843) % 60 = 15</li>
+          </ul>
+          <div class="paragraph">
+            <p>Likewise, we can ask:</p>
+          </div>
+          <ul class="simplelist">
+            <li>It is currently 23 minutes past the hour. What minute will it be 97 minutes
+              from now?</li>
+          </ul>
+          <div class="paragraph">
+            <p>In this case, the answer is 0:</p>
+          </div>
+          <ul class="simplelist">
+            <li>(23 + 97) % 60 = 0</li>
+          </ul>
+          <div class="paragraph">
+            <p>0 is another way of saying there is no remainder.</p>
+          </div>
+          <div class="paragraph">
+            <p>The result of the modulo (%) operation for minutes is always between
+              0 and 59, inclusive. This happens to be a very useful property as even
+              very large numbers can be brought down to a relatively small range
+              with modulo:</p>
+          </div>
+          <ul class="simplelist">
+            <li>14738495684013 % 60 = 33</li>
+          </ul>
+          <div class="paragraph">
+            <p>We&#8217;ll be using modulo as we define field arithmetic. Most operations
+              in finite fields use the modulo operator in some capacity.</p>
+          </div>
+          <div class="sect3">
+            <h4 id="_modulo_arithmetic_in_python">Modulo Arithmetic in Python</h4>
+            <div class="paragraph">
+              <p>Python uses the <code>%</code> operator for modulo arithmetic. Here
+                is how the modulo operator is used:</p>
+            </div>
+            <div class="listingblock">
+              <div class="content">
+                <pre class="highlight"><code class="language-python" data-lang="python">link:code-ch01/examples.py[]</code></pre>
+              </div>
+            </div>
+            <div class="paragraph">
+              <p>We can also use the modulo operator on negative numbers, like this:</p>
+            </div>
+            <div class="listingblock">
+              <div class="content">
+                <pre class="highlight"><code class="language-python" data-lang="python">link:code-ch01/examples.py[]</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sect2">
+          <h3 id="_finite_field_addition_and_subtraction">Finite Field Addition and Subtraction</h3>
+          <div class="paragraph">
+            <p>Remember that we need to define finite field addition such that we ensure
+              the result is still in the set. That is, we want to make sure that
+              addition in a finite field is <em>closed</em>.</p>
+          </div>
+          <div class="paragraph">
+            <p>We can use what we just learned, modulo arithmetic, to make addition
+              closed. Let&#8217;s say we have a finite field of 19:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>F</em><sub>19</sub> = {0, 1, 2, ... 18}</li>
+          </ul>
+          <div class="paragraph">
+            <p>where <em>a</em>, <em>b</em> ∈ <em>F</em><sub>19</sub>. Note that the
+              symbol ∈ means "is an element of." In our case, <em>a</em> and <em>b</em>              are elements of <em>F</em><sub>19</sub>.</p>
+          </div>
+          <div class="paragraph">
+            <p>Addition being closed means:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>a</em>+<sub><em>f</em></sub>b ∈ F<sub>19</sub></li>
+          </ul>
+          <div class="paragraph">
+            <p>We denote finite field addition with +<sub><em>f</em></sub> to avoid
+              confusion with normal integer addition, +.</p>
+          </div>
+          <div class="paragraph">
+            <p>If we utilize modulo arithmetic, we can guarantee this to be the case.
+              We can define <em>a</em>+<sub><em>f</em></sub><em>b</em> this way:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>a</em>+<sub><em>f</em></sub><em>b</em> = (<em>a</em> + <em>b</em>)%19</li>
+          </ul>
+          <div class="paragraph">
+            <p>For example:</p>
+          </div>
+          <ul class="simplelist">
+            <li>7+<sub><em>f</em></sub>8 = (7+8)%19 = 15</li>
+            <li>11+<sub><em>f</em></sub>17 = (11+17)%19 = 9</li>
+          </ul>
+          <div class="paragraph">
+            <p>and so on.</p>
+          </div>
+          <div class="paragraph">
+            <p>We take any two numbers in the set, add, and "wrap around" the end to
+              get the sum. We are creating our own addition operator here and the
+              result is a bit unintuitive. After all, 11+<sub><em>f</em></sub>17
+              = 9 just doesn&#8217;t look right because we&#8217;re not used to finite
+              field addition.</p>
+          </div>
+          <div class="paragraph">
+            <p>More generally, we define field addition this way:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>a</em>+<sub><em>f</em></sub><em>b</em> = (<em>a</em> + <em>b</em>)%<em>p</em></li>
+          </ul>
+          <div class="paragraph">
+            <p>where <em>a</em>, <em>b</em> ∈ <em>F</em><sub><em>p</em></sub>.</p>
+          </div>
+          <div class="paragraph">
+            <p>We also define the additive inverse this way. <em>a</em> ∈ <em>F</em><sub><em>p</em></sub>              implies that –<sub><em>f</em></sub><em>a</em> ∈ <em>F</em><sub><em>p</em></sub>:</p>
+          </div>
+          <ul class="simplelist">
+            <li>–<sub><em>f</em></sub><em>a</em> = (–<em>a</em>) % <em>p</em></li>
+          </ul>
+          <div class="paragraph">
+            <p>Again, for clarity, we use –<sub><em>f</em></sub> to distinguish field
+              subtraction and negation from integer subtraction and negation.</p>
+          </div>
+          <div class="paragraph">
+            <p>In <em>F</em><sub>19</sub>:</p>
+          </div>
+          <ul class="simplelist">
+            <li>–<sub><em>f</em></sub>9 = (–9) % 19 = 10</li>
+          </ul>
+          <div class="paragraph">
+            <p>which means that:</p>
+          </div>
+          <ul class="simplelist">
+            <li>9+<sub><em>f</em></sub> 10 = 0</li>
+          </ul>
+          <div class="paragraph">
+            <p>And that turns out to be true.</p>
+          </div>
+          <div class="paragraph">
+            <p>Similarly, we can do field subtraction:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>a</em>–<sub><em>f</em></sub><em>b</em> = (<em>a</em> – <em>b</em>)%<em>p</em></li>
+          </ul>
+          <div class="paragraph">
+            <p>where <em>a</em>, <em>b</em> ∈ <em>F</em><sub><em>p</em></sub>.</p>
+          </div>
+          <div class="paragraph">
+            <p>In <em>F</em><sub>19</sub>:</p>
+          </div>
+          <ul class="simplelist">
+            <li>11–<sub><em>f</em></sub>9=(11-9)%19 = 2</li>
+            <li>6–<sub><em>f</em></sub>13=(6-13)%19 = 12</li>
+          </ul>
+          <div class="paragraph">
+            <p>and so on.</p>
+          </div>
+          <div class="paragraph">
+            <p><a href="code-ch01/answers.py" class="bare">code-ch01/answers.py</a></p>
+          </div>
+          <div class="sect3">
+            <h4 id="_coding_addition_and_subtraction_in_python">Coding Addition and Subtraction in Python</h4>
+            <div class="paragraph">
+              <p>In the class <code>FieldElement</code> we can now define <code><em>add</em></code>                and <code><em>sub</em></code> methods. The idea of these methods
+                is that we want something like this to work:</p>
+            </div>
+            <div class="listingblock">
+              <div class="content">
+                <pre class="highlight"><code class="language-python" data-lang="python">link:code-ch01/examples.py[]</code></pre>
+              </div>
+            </div>
+            <div class="paragraph">
+              <p>In Python we can define what addition (or the + operator) means for
+                our class with the <code><em>add</em></code> method. So how do we
+                do this? We combine what we learned with modulo arithmetic and create
+                a new method of the class <code>FieldElement</code> like so:</p>
+            </div>
+            <div class="listingblock">
+              <div class="content">
+                <pre class="highlight"><code class="language-python" data-lang="python">link:code-ch01/ecc.py[]</code></pre>
+              </div>
+            </div>
+            <div class="colist arabic">
+              <ol>
+                <li>
+                  <p>We have to ensure that the elements are from the same finite field,
+                    otherwise this calculation doesn&#8217;t have any meaning.</p>
+                </li>
+                <li>
+                  <p>Addition in a finite field is defined with the modulo operator,
+                    as explained earlier.</p>
+                </li>
+                <li>
+                  <p>We have to return an instance of the class, which we can conveniently
+                    access with <code>self.<em>class</em></code>. We pass the two
+                    initializing arguments, <code>num</code> and <code>self.prime</code>,
+                    for the <code><em>init</em></code> method we saw earlier.</p>
+                </li>
+              </ol>
+            </div>
+            <div class="paragraph">
+              <p>Note that we could use <code>FieldElement</code> instead of <code>self.<em>class</em></code>,
+                but this would not make the method easily inheritable. We will be
+                subclassing <code>FieldElement</code> later, so making the method
+                inheritable is important here.</p>
+            </div>
+            <div class="paragraph">
+              <p><a href="code-ch01/answers.py" class="bare">code-ch01/answers.py</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="sect2">
+          <h3 id="_finite_field_multiplication_and_exponentiation">Finite Field Multiplication and Exponentiation</h3>
+          <div class="paragraph">
+            <p>Just as we defined a new addition (+<sub><em>f</em></sub>) for finite
+              fields that was closed, we can also define a new multiplication for
+              finite fields that&#8217;s closed. By multiplying the same number many
+              times, we can also define exponentiation. In this section, we&#8217;ll
+              go through exactly how to define this using modulo arithmetic.</p>
+          </div>
+          <div class="paragraph">
+            <p>Multiplication is adding multiple times:</p>
+          </div>
+          <ul class="simplelist">
+            <li>5 ⋅ 3 = 5 + 5 + 5 = 15</li>
+            <li>8 ⋅ 17 = 8 + 8 + 8 + ... (17 total 8's) ... + 8 = 136</li>
+          </ul>
+          <div class="paragraph">
+            <p>We can define multiplication on a finite field the same way. Operating
+              in <em>F</em><sub>19</sub> once again:</p>
+          </div>
+          <ul class="simplelist">
+            <li>5 ⋅<sub><em>f</em></sub> 3 = 5 +<sub><em>f</em></sub> 5 +<sub><em>f</em></sub>              5</li>
+            <li>8 ⋅<sub><em>f</em></sub> 17 = 8 +<sub><em>f</em></sub> 8 +<sub><em>f</em></sub>              8 +<sub><em>f</em></sub> ... (17 total 8's) ... +<sub><em>f</em></sub>              8</li>
+          </ul>
+          <div class="paragraph">
+            <p>We already know how to do the right side, and that yields a number within
+              the <em>F</em><sub>19</sub> set:</p>
+          </div>
+          <ul class="simplelist">
+            <li>5 ⋅<sub><em>f</em></sub> 3 = 5 +<sub><em>f</em></sub> 5 +<sub><em>f</em></sub>              5 = 15 % 19 = 15</li>
+            <li>8 ⋅<sub><em>f</em></sub> 17 = 8 +<sub><em>f</em></sub> 8 +<sub><em>f</em></sub>              8 +<sub><em>f</em></sub> ... (17 total 8's) ... +<sub><em>f</em></sub>              8 = (8⋅17) % 19 = 136 % 19 = 3</li>
+          </ul>
+          <div class="paragraph">
+            <p>Note that the second result is pretty unintuitive. We don&#8217;t normally
+              think of 8 ⋅<sub><em>f</em></sub> 17 = 3, but that&#8217;s part of
+              what&#8217;s necessary in order to define multiplication to be closed.
+              That is, the result of field multiplication is always in the set {0,
+              1, &#8230;&#8203; <em>p</em>–1}.</p>
+          </div>
+          <div class="paragraph">
+            <p>Exponentiation is simply multiplying a number many times:</p>
+          </div>
+          <ul class="simplelist">
+            <li>7<sup>3</sup>=7⋅<sub><em>f</em></sub>7⋅<sub><em>f</em></sub>7 = 343</li>
+          </ul>
+          <div class="paragraph">
+            <p>In a finite field, we can do exponentiation using modulo arithmetic.</p>
+          </div>
+          <div class="paragraph">
+            <p>In <em>F</em><sub>19</sub>:</p>
+          </div>
+          <ul class="simplelist">
+            <li>7<sup>3</sup> = 343 % 19=1</li>
+            <li>9<sup>12</sup> = 7</li>
+          </ul>
+          <div class="paragraph">
+            <p>Exponentiation again gives us counterintuitive results. We don&#8217;t
+              normally think 7<sup>3</sup> = 1 or 9<sup>12</sup> = 7. Again, finite
+              fields have to be defined so that the operations <em>always</em> result
+              in a number within the field.</p>
+          </div>
+          <div class="paragraph">
+            <p><a href="code-ch01/answers.py" class="bare">code-ch01/answers.py</a></p>
+          </div>
+          <div class="paragraph">
+            <p><a href="code-ch01/answers.py" class="bare">code-ch01/answers.py</a></p>
+          </div>
+          <div class="admonitionblock note">
+            <table>
+              <tr>
+                <td class="icon">
+                  <div class="title">Note</div>
+                </td>
+                <td class="content">
+                  <div class="title">Why Fields Are Prime</div>
+                  <div class="paragraph">
+                    <p>The answer to Exercise 5 is why fields have to have a <em>prime</em>                      power number of elements. No matter what <em>k</em> you choose,
+                      as long as it&#8217;s greater than 0, multiplying the entire
+                      set by <em>k</em> will result in the same set as you started
+                      with.</p>
+                  </div>
+                  <div class="paragraph">
+                    <p>Intuitively, the fact that we have a prime order results in every
+                      element of a finite field being equivalent. If the order of
+                      the set was a composite number, multiplying the set by one
+                      of the divisors would result in a smaller set.</p>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+          <div class="sect3">
+            <h4 id="_coding_multiplication_in_python">Coding Multiplication in Python</h4>
+            <div class="paragraph">
+              <p>Now that we understand what multiplication should be in <code>FieldElement</code>,
+                we want to define the <code><em>mul</em></code> method that overrides
+                the <code>*</code> operator. We want this to work:</p>
+            </div>
+            <div class="listingblock">
+              <div class="content">
+                <pre class="highlight"><code class="language-python" data-lang="python">link:code-ch01/examples.py[]</code></pre>
+              </div>
+            </div>
+            <div class="paragraph">
+              <p>As with addition and subtraction, the next exercise is to make multiplication
+                work for our class by defining the <code><em>mul</em></code> method.</p>
+            </div>
+            <div class="paragraph">
+              <p><a href="code-ch01/answers.py" class="bare">code-ch01/answers.py</a></p>
+            </div>
+          </div>
+          <div class="sect3">
+            <h4 id="_coding_exponentiation_in_python">Coding Exponentiation in Python</h4>
+            <div class="paragraph">
+              <p>We need to define the exponentiation for <code>FieldElement</code>,
+                which in Python can be defined with the <code><em>pow</em></code>                method, overriding the <code>**</code> operator. The difference here
+                is that the exponent is <em>not</em> a <code>FieldElement</code>,
+                so it has to be treated a bit differently. We want something like
+                this to work:</p>
+            </div>
+            <div class="listingblock">
+              <div class="content">
+                <pre class="highlight"><code class="language-python" data-lang="python">link:code-ch01/examples.py[]</code></pre>
+              </div>
+            </div>
+            <div class="paragraph">
+              <p>Note that because the exponent is an integer, instead of another instance
+                of <code>FieldElement</code>, the method receives the variable <code>exponent</code>                as an integer. We can code it this way:</p>
+            </div>
+            <div class="listingblock">
+              <div class="content">
+                <pre class="highlight"><code class="language-python" data-lang="python">class FieldElement:
+...
+    def __pow__(self, exponent):
+        num = (self.num ** exponent) % self.prime  <b class="conum">(1)</b>
+        return self.__class__(num, self.prime)  <b class="conum">(2)</b></code></pre>
+              </div>
+            </div>
+            <div class="colist arabic">
+              <ol>
+                <li>
+                  <p>This is a perfectly fine way to do it, but <code>pow(self.num, exponent, self.prime)</code>                    is more efficient.</p>
+                </li>
+                <li>
+                  <p>We have to return an instance of the class as before.</p>
+                </li>
+              </ol>
+            </div>
+            <div class="paragraph">
+              <p>Why don&#8217;t we force the exponent to be a <code>FieldElement</code>                object? It turns out that the exponent doesn&#8217;t have to be a
+                member of the finite field for the math to work. In fact, if it were,
+                the exponents wouldn&#8217;t display the intuitive behavior we expect,
+                like being able to add the exponents when we multiply with the same
+                base.</p>
+            </div>
+            <div class="paragraph">
+              <p>Some of what we&#8217;re doing now may seem slow for large numbers,
+                but we&#8217;ll use some clever tricks to improve the performance
+                of these algorithms.</p>
+            </div>
+            <div class="paragraph">
+              <p><a href="code-ch01/answers.py" class="bare">code-ch01/answers.py</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="sect2">
+          <h3 id="_finite_field_division">Finite Field Division</h3>
+          <div class="paragraph">
+            <p>The intuition that helps us with addition, subtraction, multiplication,
+              and perhaps even exponentiation unfortunately doesn&#8217;t help us
+              quite as much with division. Because division is the hardest operation
+              to make sense of, we&#8217;ll start with something that should make
+              sense.</p>
+          </div>
+          <div class="paragraph">
+            <p>In normal math, division is the inverse of multiplication:</p>
+          </div>
+          <div class="ulist">
+            <ul>
+              <li>
+                <p>7 ⋅ 8 = 56 implies that 56/8 = 7</p>
+              </li>
+              <li>
+                <p>12 ⋅ 2 = 24 implies that 24/12 = 2</p>
+              </li>
+            </ul>
+          </div>
+          <div class="paragraph">
+            <p>And so on. We can use this as the definition of division to help us.
+              Note that like in normal math, you cannot divide by 0.</p>
+          </div>
+          <div class="paragraph">
+            <p>In <em>F</em><sub>19</sub>, we know that:</p>
+          </div>
+          <ul class="simplelist">
+            <li>3⋅<sub><em>f</em></sub>7 = 21%19 = 2 implies that 2/<sub><em>f</em></sub>7
+              = 3</li>
+            <li>9⋅<sub><em>f</em></sub>5 = 45%19 = 7 implies that 7/<sub><em>f</em></sub>5
+              = 9</li>
+          </ul>
+          <div class="paragraph">
+            <p>This is very unintuitive, as we generally think of 2/<sub><em>f</em></sub>7
+              or 7/<sub><em>f</em></sub>5 as fractions, not nice finite field elements.
+              Yet that is one of the remarkable things about finite fields: finite
+              fields are <em>closed</em> under division. That is, dividing any two
+              numbers where the denominator is not 0 will result in another finite
+              field element.</p>
+          </div>
+          <div class="paragraph">
+            <p>The question you might be asking yourself is, how do I calculate 2/<sub><em>f</em></sub>7
+              if I don&#8217;t know beforehand that 3⋅<sub><em>f</em></sub>7 = 2?
+              This is indeed a very good question; to answer it, we&#8217;ll have
+              to use the result from Exercise 7.</p>
+          </div>
+          <div class="paragraph">
+            <p>In case you didn&#8217;t get it, the answer is that <em>n</em><sup>(<em>p</em>–1)</sup>              is always 1 for every <em>p</em> that is prime and every <em>n</em>              &gt; 0. This is a beautiful result from number theory called Fermat&#8217;s
+              little theorem. Essentially, the theorem says:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>n</em><sup>(<em>p</em>–1)</sup>%<em>p</em> = 1 </li>
+          </ul>
+          <div class="paragraph">
+            <p>where <em>p</em> is prime.</p>
+          </div>
+          <div class="paragraph">
+            <p>Since we are operating in prime fields, this will always be true.</p>
+          </div>
+          <div class="sidebarblock">
+            <div class="content">
+              <div class="title">Fermat&#8217;s Little Theorem</div>
+              <div class="paragraph">
+                <p>There are many proofs of this theorem, but perhaps the simplest is
+                  using what we saw in Exercise 5—namely, that these sets are equal:</p>
+              </div>
+              <ul class="simplelist">
+                <li>{1, 2, 3, ... <em>p</em>–2, <em>p</em>–1} = {<em>n</em>%<em>p</em>,
+                  2<em>n</em>%<em>p</em>, 3<em>n</em>%<em>p</em> (<em>p</em>–2)<em>n</em>%<em>p</em>,
+                  (<em>p</em>–1)<em>n</em>%<em>p</em>}</li>
+              </ul>
+              <div class="paragraph">
+                <p>The resulting numbers might not be in the right order, but the same
+                  numbers are in both sets. We can then multiply every element in
+                  both sets to get this equality:</p>
+              </div>
+              <ul class="simplelist">
+                <li>1 ⋅ 2 ⋅ 3 ⋅ ... ⋅ (<em>p</em>–2) ⋅ (<em>p</em>–1) % <em>p</em> =
+                  <em>n</em> ⋅ 2<em>n</em> ⋅ 3<em>n</em> ⋅ ... ⋅ (<em>p</em>–2)<em>n</em>                  ⋅ (<em>p</em>–1)<em>n</em> % <em>p</em></li>
+              </ul>
+              <div class="paragraph">
+                <p>The left side is the same as (<em>p</em>–1)! % <em>p</em> where !
+                  is the factorial (e.g., 5! = 5 ⋅ 4 ⋅ 3 ⋅ 2 ⋅ 1). On the right side,
+                  we can gather up all the <em>n</em>&#8217;s and get:</p>
+              </div>
+              <ul class="simplelist">
+                <li>(<em>p</em>–1)! ⋅ <em>n</em><sup>(p–1)</sup> % <em>p</em></li>
+              </ul>
+              <div class="paragraph">
+                <p>Thus:</p>
+              </div>
+              <ul class="simplelist">
+                <li>(<em>p</em>–1)! % <em>p</em> = (<em>p</em>–1)! ⋅ <em>n</em><sup>(p–1)</sup>                  % <em>p</em></li>
+              </ul>
+              <div class="paragraph">
+                <p>The (<em>p</em>–1)! on both sides cancel, giving us:</p>
+              </div>
+              <ul class="simplelist">
+                <li>1 = <em>n</em><sup>(p–1)</sup> % <em>p</em></li>
+              </ul>
+              <div class="paragraph">
+                <p>This proves Fermat&#8217;s little theorem.</p>
+              </div>
+            </div>
+          </div>
+          <div class="paragraph">
+            <p>Because division is the inverse of multiplication, we know:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>a</em>/<em>b</em> = <em>a</em>⋅<sub><em>f</em></sub>(1/<em>b</em>)
+              = <em>a</em>⋅<sub><em>f</em></sub><em>b</em><sup>–1</sup></li>
+          </ul>
+          <div class="paragraph">
+            <p>We can reduce the division problem to a multiplication problem as long
+              as we can figure out what <em>b</em><sup>–1</sup> is. This is where
+              Fermat&#8217;s little theorem comes into play. We know:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>b</em><sup>(<em>p</em>–1)</sup> = 1</li>
+          </ul>
+          <div class="paragraph">
+            <p>because <em>p</em> is prime. Thus:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>b</em><sup>–1</sup> = <em>b</em><sup>–1</sup>⋅<sub><em>f</em></sub>1=<em>b</em><sup>–1</sup>⋅<sub><em>f</em></sub><em>b</em><sup>(<em>p</em>–1)</sup>              = <em>b</em><sup>(<em>p</em>–2)</sup></li>
+          </ul>
+          <div class="paragraph">
+            <p>or:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>b</em><sup>–1</sup> = <em>b</em><sup>(<em>p</em>–2)</sup></li>
+          </ul>
+          <div class="paragraph">
+            <p>In <em>F</em><sub>19</sub>, this means practically that <em>b</em><sup>18</sup>              = 1 , which means that <em>b</em><sup>–1</sup> = <em>b</em><sup>17</sup>              for all <em>b</em> &gt; 0.</p>
+          </div>
+          <div class="paragraph">
+            <p>So in other words, we can calculate the inverse using the exponentiation
+              operator. In <em>F</em><sub>19</sub>:</p>
+          </div>
+          <ul class="simplelist">
+            <li>2/7 = 2⋅7<sup>(19 – 2)</sup> = 2⋅7<sup>17</sup>=465261027974414%19 =
+              3</li>
+            <li> 7/5 = 7⋅5<sup>(19 – 2)</sup> = 7⋅5<sup>17</sup>=5340576171875%19 = 9</li>
+          </ul>
+          <div class="paragraph">
+            <p>This is a relatively expensive calculation as exponentiating grows very
+              fast. Division is the most expensive operation for that reason. To
+              lessen the expense, we can use the <code>pow</code> function in Python,
+              which does exponentiation. In Python, <code>pow(7,17)</code> does the
+              same thing as <code>7<strong>17</code>. The <code>pow</code> function,
+              however, has an optional third argument that makes our calculation
+              more efficient. Specifically, <code>pow</code> will modulo by the third
+              argument. Thus, <code>pow(7,17,19)</code> will give the same result
+              as <code>7</strong>17%19</code> but do so faster because the modulo
+              function is done after each round of multiplication.</p>
+          </div>
+          <div class="paragraph">
+            <p><a href="code-ch01/answers.py" class="bare">code-ch01/answers.py</a></p>
+          </div>
+          <div class="paragraph">
+            <p><a href="code-ch01/answers.py" class="bare">code-ch01/answers.py</a></p>
+          </div>
+        </div>
+        <div class="sect2">
+          <h3 id="_redefining_exponentiation">Redefining Exponentiation</h3>
+          <div class="paragraph">
+            <p>One last thing that we need to take care of before we leave this chapter
+              is the <code><em>pow</em></code> method, which needs to handle negative
+              exponents. For example, <em>a</em><sup>–3</sup> needs to be a finite
+              field element, but the current code does not take care of this case.
+              We want, for example, something like this to work:</p>
+          </div>
+          <div class="listingblock">
+            <div class="content">
+              <pre class="highlight"><code class="language-python" data-lang="python">link:code-ch01/examples.py[]</code></pre>
+            </div>
+          </div>
+          <div class="paragraph">
+            <p>Unfortunately, the way we&#8217;ve defined <code><em>pow</em></code>              simply doesn&#8217;t handle negative exponents, because the second
+              parameter of the built-in Python function <code>pow</code> is required
+              to be positive.</p>
+          </div>
+          <div class="paragraph">
+            <p>Thankfully, we can use some math we already know to solve this. We know
+              from <span class="keep-together">Fermat's</span> little theorem that:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>a</em><sup><em>p</em>–1</sup> = 1</li>
+          </ul>
+          <div class="paragraph">
+            <p>This fact means that we can multiply by <em>a</em><sup><em>p</em>–1</sup>              as many times as we want. So, for <em>a</em><sup>–3</sup>, we can do:</p>
+          </div>
+          <ul class="simplelist">
+            <li><em>a</em><sup>–3</sup> = <em>a</em><sup>–3</sup> ⋅ <em>a</em><sup><em>p</em>–1</sup>              = <em>a</em><sup><em>p</em>–4</sup></li>
+          </ul>
+          <div class="paragraph">
+            <p>This is a way we can do negative exponents. A naive implementation would
+              do something like this:</p>
+          </div>
+          <div class="listingblock">
+            <div class="content">
+              <pre class="highlight"><code class="language-python" data-lang="python">class FieldElement:
+...
+    def __pow__(self, exponent):
+	n = exponent
+	while n &lt; 0:
+	    n += self.prime - 1 <b class="conum">(1)</b>
+        num = pow(self.num, n, self.prime) <b class="conum">(2)</b>
+        return self.__class__(num, self.prime)</code></pre>
+            </div>
+          </div>
+          <div class="colist arabic">
+            <ol>
+              <li>
+                <p>We add until we get a positive exponent.</p>
+              </li>
+              <li>
+                <p>We use the Python built-in <code>pow</code> to make this more efficient.</p>
+              </li>
+            </ol>
+          </div>
+          <div class="paragraph">
+            <p>Thankfully, we can do even better. We already know how to force a number
+              out of being negative, using our familiar friend <code>%</code>! As
+              a bonus, we can also reduce very large exponents at the same time given
+              that <em>a</em><sup><em>p</em>–1</sup> = 1. This will make the <code>pow</code>              function not work as hard:</p>
+          </div>
+          <div class="listingblock">
+            <div class="content">
+              <pre class="highlight"><code class="language-python" data-lang="python">class FieldElement:
+...
+link:code-ch01/ecc.py[]</code></pre>
+            </div>
+          </div>
+          <div class="colist arabic">
+            <ol>
+              <li>
+                <p>Make the exponent into something within the 0 to <em>p</em>–2 range,
+                  inclusive.</p>
+              </li>
+            </ol>
+          </div>
+        </div>
+        <div class="sect2">
+          <h3 id="_conclusion">Conclusion</h3>
+          <div class="paragraph">
+            <p>In this chapter we learned about finite fields and how to implement them
+              in Python. We&#8217;ll be using finite fields in <a href="#chapter_elliptic_curve_cryptography">[chapter_elliptic_curve_cryptography]</a>              for elliptic curve cryptography. We turn next to the other mathematical
+              component that we need for elliptic curve cryptography: elliptic curves.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
